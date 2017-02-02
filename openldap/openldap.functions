@@ -1,0 +1,99 @@
+# This file is part of libertine linux's package openldap. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT. No part of libertine linux's package openldap, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package openldap. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT.
+
+
+variant=mirror
+
+depends libressl
+depends gmp
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip
+
+depends build_busybox
+build_needs expr install sort ls sleep
+
+build_needs date
+
+build_needs sed
+libertine_compile_openldap()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_populateInputSysroot libressl gmp
+		
+		sed -i -e 's/SUBDIRS= include libraries clients servers tests doc/SUBDIRS= include libraries clients servers/g' Makefile.in
+		
+		# spasswd ?yes?
+		# slapi
+		# slpv2
+		
+		# Might be able to avoid need for clients by using curl's LDAP support for openssh / keys ...
+		#  Except sudo assumes it, but if not using sudo...
+		# --with-cyrus-sasl  Sasl library
+		# --with-fetch  Need fetch utility / library
+		# --with-odbc=iodbc|unixodbc|odbc3  unixodbc seems ok, also https://github.com/openlink/iODBC/
+		
+		libertine_public_autoconf_modernAutoconfConfigure \
+			--enable-debug=no \
+			--enable-dynamic=no \
+			--enable-syslog \
+			--enable-proctitle \
+			--enable-ipv6 \
+			--enable-local \
+			--enable-slapd \
+			--enable-dynacl=no \
+			--enable-aci=yes \
+			--enable-cleartext=no \
+			--enable-crypt=yes \
+			--enable-lmpasswd=no \
+			--enable-spasswd=no \
+			--enable-modules=no \
+			--enable-rewrite=yes \
+			--enable-rlookups=no \
+			--enable-slapi=no \
+			--enable-slp=no \
+			--enable-wrappers=no \
+			--enable-bdb=no \
+			--enable-dnssrv=yes \
+			--enable-hdb=no \
+			--enable-ldap=yes \
+			--enable-mdb=yes \
+			--enable-meta=no \
+			--enable-asyncmeta=no \
+			--enable-monitor=no \
+			--enable-ndb=no \
+			--enable-null=no \
+			--enable-passwd=no \
+			--enable-perl=no \
+			--enable-relay=yes \
+			--enable-shell=no \
+			--enable-sock=no \
+			--enable-sql=no \
+			--enable-wt=no \
+			--enable-overlays \
+			--enable-static \
+			--enable-shared=no \
+			--with-threads \
+			--with-tls=openssl \
+			--with-mp=gmp \
+			--without-odbc \
+			--without-pic \
+			--with-gnu-ld
+		
+		libertine_public_make depend
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+	
+	libertine_public_installAndStripBinariesIn bin chopenldap getfopenldap setfopenldap
+}

@@ -1,0 +1,76 @@
+[submodule "llvm"]
+	path = llvm
+	url = https://github.com/llvm-mirror/llvm.git
+	branch = release_40
+[submodule "clang"]
+	path = clang
+	url = https://github.com/llvm-mirror/clang.git
+	branch = release_40
+[submodule "clang-tools-extra"]
+	path = clang-tools-extra
+	url = https://github.com/llvm-mirror/clang-tools-extra.git
+	branch = release_40
+[submodule "polly"]
+	path = polly
+	url = https://github.com/llvm-mirror/polly.git
+	branch = release_40
+[submodule "lld"]
+	path = lld
+	url = https://github.com/llvm-mirror/lld.git
+	branch = release_40
+[submodule "lldb"]
+	path = lldb
+	url = https://github.com/llvm-mirror/lldb.git
+	branch = release_40
+[submodule "compiler-rt"]
+	path = compiler-rt
+	url = https://github.com/llvm-mirror/compiler-rt.git
+	branch = release_40
+[submodule "libcxx"]
+	path = libcxx
+	url = https://github.com/llvm-mirror/libcxx.git
+	branch = release_40
+[submodule "libcxxabi"]
+	path = libcxxabi
+	url = https://github.com/llvm-mirror/libcxxabi.git
+	branch = release_40
+[submodule "upstream_4_0/llvm"]
+	path = upstream_4_0/llvm
+	url = https://github.com/llvm-mirror/llvm.git
+	branch = release_40
+[submodule "upstream_4_0/clang"]
+	path = upstream_4_0/clang
+	url = https://github.com/llvm-mirror/clang.git
+	branch = release_40
+[submodule "upstream_4_0/clang-tools-extra"]
+	path = upstream_4_0/clang-tools-extra
+	url = https://github.com/llvm-mirror/clang-tools-extra.git
+	branch = release_40
+[submodule "upstream_4_0/polly"]
+	path = upstream_4_0/polly
+	url = https://github.com/llvm-mirror/polly.git
+	branch = release_40
+[submodule "upstream_4_0/lld"]
+	path = upstream_4_0/lld
+	url = https://github.com/llvm-mirror/lld.git
+	branch = release_40
+[submodule "upstream_4_0/lldb"]
+	path = upstream_4_0/lldb
+	url = https://github.com/llvm-mirror/lldb.git
+	branch = release_40
+[submodule "upstream_4_0/compiler-rt"]
+	path = upstream_4_0/compiler-rt
+	url = https://github.com/llvm-mirror/compiler-rt.git
+	branch = release_40
+[submodule "upstream_4_0/libcxx"]
+	path = upstream_4_0/libcxx
+	url = https://github.com/llvm-mirror/libcxx.git
+	branch = release_40
+[submodule "upstream_4_0/libcxxabi"]
+	path = upstream_4_0/libcxxabi
+	url = https://github.com/llvm-mirror/libcxxabi.git
+	branch = release_40
+[submodule "upstream_4_0/libunwind"]
+	path = upstream_4_0/libunwind
+	url = https://github.com/llvm-mirror/libunwind.git
+	branch = release_40

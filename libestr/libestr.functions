@@ -1,0 +1,66 @@
+# This file is part of libertine linux's package rsyslog. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT. No part of libertine linux's package rsyslog, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package rsyslog. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_slibtool
+build_needs clibtool-static libtoolize realpath
+
+depends build_perl
+build_needs perl
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_file
+build_needs file
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib
+
+depends build_busybox
+build_needs expr install sort ls sleep uname
+
+depends build_pkg_config
+
+depends build_PkgConfig
+build_needs pkg-config
+
+build_needs rm
+libertine_compile_libestr()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_autoconf_adjustConfigureAcToRemoveGnuTextCruftBeforeAutoconf
+		
+		libtoolize --install --force --verbose
+		
+		libertine_public_autoconf_installPkgConfigM4Macro
+		
+		autoreconf --install --force --verbose
+		
+		libertine_public_autoconf_modernAutoconfConfigure \
+			--disable-testbench \
+			--disable-debug
+		
+		libertine_public_autoconf_removePoToRemoveGnuTextCruftBeforeMake
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+}

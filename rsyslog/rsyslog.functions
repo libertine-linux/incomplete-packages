@@ -1,0 +1,185 @@
+# This file is part of libertine linux's package rsyslog. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT. No part of libertine linux's package rsyslog, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package rsyslog. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends zlib
+
+depends libuuid
+
+depends curl
+
+depends libestr
+
+depends libfastjson
+
+# Used for TLS; not a great choice
+depends libgnutls
+
+# Bizarrely, only used for mmrfc5424addhmac not TLS!
+depends libressl
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_slibtool
+build_needs clibtool-static libtoolize realpath
+
+depends build_perl
+build_needs perl
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_bison
+build_needs bison
+
+depends build_flex
+build_needs flex
+
+depends build_file
+build_needs file
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip
+
+depends build_paxctl
+build_needs paxctl
+
+depends build_busybox
+build_needs expr install sort ls sleep uname
+
+depends build_pkg_config
+
+depends build_PkgConfig
+build_needs pkg-config
+
+build_needs rm
+libertine_compile_rsyslog()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		rm -rf .git
+		
+		libertine_public_populateInputSysroot zlib libuuid curl libestr libfastjson libgnutls libressl
+		
+		libertine_public_autoconf_adjustConfigureAcToRemoveGnuTextCruftBeforeAutoconf
+		
+		libtoolize --install --force --verbose
+		
+		libertine_public_autoconf_installPkgConfigM4Macro
+		
+		autoreconf --install --force --verbose
+		
+		# Consider enabling snmp support (--enable-snmp, --enable-mmsnmptrapd)
+		# Consider adding libgcrypt-config for log encryption
+		# Consider adding GuardTime support
+				
+		libertine_public_autoconf_modernAutoconfConfigure \
+			--enable-largefile \
+			--enable-regexp \
+			--disable-gssapi-krb5 \
+			--enable-klog \
+			--enable-kmsg \
+			--disable-imjournal \
+			--enable-inet \
+			--disable-jemalloc \
+			--enable-unlimited-select \
+			--disable-debug \
+			--disable-debug-symbols \
+			--disable-rtinst \
+			--enable-debugless \
+			--disable-valgrind \
+			--disable-memcheck \
+			--disable-diagtools \
+			--enable-usertools \
+			--disable-mysql \
+			--disable-pgsql \
+			--disable-libdbi \
+			--disable-snmp \
+			--enable-uuid \
+			--enable-elasticsearch \
+			--disable-elasticsearch-tests \
+			--enable-gnutls \
+			--disable-libgcrypt \
+			--enable-rsyslogrt \
+			--enable-rsyslogd \
+			--disable-extended-tests \
+			--disable-mysql-tests
+			--disable-pgsql-tests \
+			--disable-mail \
+			--disable-imdiag \
+			--enable-mmnormalize \
+			--enable-mmjsonparse \
+			--enable-mmgrok \
+			--enable-mmaudit \
+			--enable-mmanon \
+			--enable-mmrm1stspace \
+			--enable-mmutf8fix \
+			--enable-mmcount \
+			--enable-mmsequence \
+			--disable-mmdblookup \
+			--enable-mmfields \
+			--enable-mmpstrucdata \
+			--enable-mmrfc5424addhmac \
+			--disable-relp \
+			--disable-guardtime \
+			--disable-gt-ksi \
+			--enable-liblogging-stdlog \
+			--enable-rfc3195 \
+			--disable-testbench \
+			--enable-imfile \
+			--disable-imsolaris \
+			--enable-imptcp \
+			--enable-impstats \
+			--enable-omprog \
+			--enable-omudpspoof \
+			--enable-omstdout \
+			--disable-omjournal \
+			--disable-pmlastmsg \
+			--disable-pmcisconames \
+			--disable-pmciscoios \
+			--disable-pmnull \
+			--disable-pmaixforwardedfrom \
+			--disable-pmsnare \
+			--disable-pmpanngfw \
+			--enable-omruleset \
+			--disable-mmsnmptrapd \
+			--disable-omhdfs \
+			--disable-omkafka \
+			--disable-kafka-tests \
+			--disable-ommongodb \
+			--disable-imzmq3 \
+			--disable-imczmq \
+			--disable-omzmq3 \
+			--disable-omczmq \
+			--disable-omrabbitmq \
+			--disable-omhiredis \
+			--disable-omhttpfs \
+			--disable-omamqp1 \
+			--disable-omtcl \
+			--disable-generate-man-pages \
+			--enable-distcheck-workaround
+		
+		libertine_public_autoconf_removePoToRemoveGnuTextCruftBeforeMake
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+	
+	libertine_public_installAndStripBinaryIn bin chrsyslog
+	libertine_public_installAndStripBinaryIn bin getfrsyslog
+	libertine_public_installAndStripBinaryIn bin setfrsyslog
+}

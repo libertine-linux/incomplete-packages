@@ -1,0 +1,150 @@
+# This file is part of libertine linux's package zlib. It is subject to the license terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/zlib/master/COPYRIGHT. No part of libertine linux's package zlib, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package zlib. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/zlib/master/COPYRIGHT.
+
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_cmake
+build_needs cmake
+
+depends build_busybox
+build_needs sh env
+
+depends build_python_2_7
+build_needs python2.7
+
+case "$package" in
+	
+	build_llvm_4_0)
+
+		variant=upstream_4_0
+		
+		build_needs "$libertine_build"-cc "$libertine_build"-c++ "$libertine_build"-ar "$libertine_build"-ranlib "$libertine_build"-as "$libertine_build"-ld "$libertine_build"-strip "$libertine_build"-nm "$libertine_build"-objcopy "$libertine_build"-objdump "$libertine_build"-readelf
+		depends build_musl_cross_make_build
+
+		build_provides XXXX
+		
+		libertine_compile_build_llvm_4_0()
+		{
+			# Notes: To use polly, one must add to the CFLAGS: clang -O3 -mllvm -polly (polly only works at -O3; see http://polly.llvm.org/docs/UsingPollyWithClang.html)
+			
+			# LLDB build is disabled for now
+			# LLDB needs python, libedit, ncurses (and terminfo) and swig
+			# swig needs libprce (now pcre1)
+			# -DLLDB_RELOCATABLE_PYTHON=0 \
+			# -DLLDB_DISABLE_CURSES=1 \
+			# -DLLDB_DISABLE_LIBEDIT=1 \
+			# -DLLVM_ENABLE_TERMINFO=0 \
+			
+			local isForBuild='true'
+
+			if $isForBuild; then
+				local pythonHome="$(libertine_public_outputBuildSysrootPath build_python_2_7)"
+			else
+				local pythonHome='/usr'
+			fi
+
+			local ourPythonWithVersion=python2.7
+			local pythonBinaryFilePath="$(libertine_public_buildNeedsPath)"/python
+			ln -s "$ourPythonWithVersion" "$pythonBinaryFilePath"
+			local pythonIncludeFolderPath="$("$pythonBinaryFilePath" -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")"
+			local pythonLibFolderPath="$("$pythonBinaryFilePath" -c "import distutils.sysconfig as sysconfig; import os; print(sysconfig.get_config_var('LIBDIR'))")"
+			localpythonStaticLibraryFilePath="$pythonLibFolderPath"/lib${ourPythonWithVersion}.a
+
+			local sourceFolderPath="$(libertine_public_sourcePath)"
+			local llvmSourcePath="$sourceFolderPath"/llvm
+			
+			local tool
+			for tool in clang lld polly
+			do
+				mv "$sourceFolderPath"/"$tool" "$llvmSourcePath"/tools
+			done
+			
+			mv "$sourceFolderPath"/clang-tools-extra "$llvmSourcePath"/tools/clang/extra
+			
+			local project
+			for project in compiler-rt libunwind libcxx libcxxabi
+			do
+				mv "$sourceFolderPath"/"$project" "$llvmSourcePath"/projects
+			done
+			
+			# Info: https://blogs.gentoo.org/gsoc2016-native-clang/2016/05/05/build-a-freestanding-libcxx/
+			# Info: https://stackoverflow.com/questions/25840088/how-to-build-libcxx-and-libcxxabi-by-clang-on-centos-7
+			
+			pushd "$llvmSourcePath"
+				
+				# http://llvm.org/docs/CMake.html
+								
+				# DLIBCXX_USE_COMPILER_RT - uses compiler-rt rather that libgcc
+				libertine_public_cmake \	
+					-DPYTHON_HOME="$pythonHome" \
+					-DPYTHON_INCLUDE_DIR="$pythonIncludeFolderPath" \
+					-DPYTHON_LIBRARY="$pythonStaticLibraryFilePath" \
+					-DLLVM_TARGETS_TO_BUILD:STRING='all' \
+					-DLLVM_BUILD_TOOLS:BOOL=ON \
+					-DLLVM_INCLUDE_TOOLS:BOOL=ON \
+					-DLLVM_BUILD_EXAMPLES:BOOL=OFF \
+					-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF \
+					-DLLVM_BUILD_TESTS:BOOL=OFF \
+					-DLLVM_INCLUDE_TESTS:BOOL=OFF \
+					-DLLVM_APPEND_VC_REV:BOOL=OFF \
+					-DLLVM_ENABLE_THREADS:BOOL=ON \
+					-DLLVM_ENABLE_CXX1Y:BOOL=OFF \
+					-DLLVM_ENABLE_ASSERTIONS:BOOL=OFF \
+					-DLLVM_ENABLE_EH:BOOL=OFF \
+					-DLLVM_ENABLE_EXPENSIVE_CHECKS:BOOL=OFF \
+					-DLLVM_ENABLE_PIC:BOOL=OFF \
+					-DLLVM_ENABLE_RTTI:BOOL=OFF \
+					-DLLVM_ENABLE_WARNINGS:BOOL=ON \
+					-DLLVM_ENABLE_PEDANTIC:BOOL=OFF \
+					-DLLVM_ENABLE_WERROR:BOOL=OFF \
+					-DLLVM_ABI_BREAKING_CHECKS:STRING='WITH_ASSERTS' \
+					-DLLVM_BUILD_32_BITS:BOOL=OFF \
+					-DLLVM_TARGET_ARCH:STRING='host' \
+					-DLLVM_ENABLE_FFI:BOOL=OFF \
+					-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL=OFF \
+					-DLIBCXX_ENABLE_FILESYSTEM:BOOL=OFF \
+					-DLIBCXX_INCLUDE_TESTS:BOOL=OFF \
+					-DLIBCXX_INCLUDE_DOCS:BOOL=OFF \
+					-DLIBCXX_USE_COMPILER_RT:BOOL=ON \
+					-DLIBCXX_INSTALL_LIBRARY:BOOL=ON \
+					-DLIBCXX_INSTALL_HEADERS:BOOL=ON \
+					-DLIBCXX_ENABLE_ASSERTIONS:BOOL=OFF \
+					-DLIBCXX_BUILD_32_BITS:BOOL=OFF \
+					-DLIBCXX_ENABLE_SHARED:BOOL=OFF \
+					-DLIBCXX_CXX_ABI:STRING='libcxxabi' \
+					-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL=ON \
+					-DLIBCXX_ENABLE_ABI_LINKER_SCRIPT:BOOL=OFF \
+					-DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=ON \
+					-DLIBCXX_INCLUDE_BENCHMARKS:BOOL=OFF
+					-DLIBCXX_HAS_MUSL_LIBC:BOOL=ON \
+					-DLIBCXX_HAS_PTHREAD_API:BOOL=ON \
+					-DLIBUNWIND_BUILD_32_BITS:BOOL=OFF \
+					-DLIBUNWIND_ENABLE_ASSERTIONS:BOOL=OFF \
+					-DLIBUNWIND_ENABLE_PEDANTIC:BOOL=OFF \
+					-DLIBUNWIND_ENABLE_SHARED:BOOL=OFF \
+					-DLIBUNWIND_ENABLE_CROSS_UNWINDING:BOOL=OFF \
+					-DLIBUNWIND_ENABLE_THREADS:BOOL=ON \
+					-DLIBCXX_HAS_GCC_S_LIB=0 \
+					-DLIBCXXABI_LIBCXX_INCLUDES=../../libcxx/include
+					
+				pushd .libertine-cmake-build
+					
+					libertine_public_make VERBOSE=1
+					libertine_public_make install
+				
+				popd
+				
+			popd
+		}
+	;;
+	
+	*)
+		core_exit 1 "The package '$package' is not finished"
+	;;
+	
+esac
