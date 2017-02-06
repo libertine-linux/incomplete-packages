@@ -1,0 +1,4 @@
+[submodule "upstream"]
+	path = upstream
+	url = https://github.com/buytenh/ivykis.git
+	branch = master

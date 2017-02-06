@@ -1,0 +1,4 @@
+[submodule "upstream"]
+	path = upstream
+	url = https://github.com/json-c/json-c.git
+	branch = master

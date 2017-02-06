@@ -1,0 +1,160 @@
+# This file is part of libertine linux's package syslog_ng. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT. No part of libertine linux's package syslog_ng, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package syslog_ng. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends zlib libressl libpcre curl glib eventlog ivykis json_c libcap
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_slibtool
+build_needs clibtool clibtool-static libtoolize realpath
+
+depends build_perl
+build_needs perl
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip
+
+depends build_paxctl
+build_needs paxctl
+
+depends build_PkgConfig
+build_needs pkg-config
+
+depends build_bison
+build_needs bison
+
+depends build_flex
+build_needs flex
+
+depends build_busybox
+build_needs expr install sort ls sleep uname date file cut egrep touch cmp
+
+build_needs grep uname sed
+
+libertine_compile_syslog_ng()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_populateInputSysroot zlib libressl curl glib libpcre eventlog ivykis json_c libcap
+		
+		libertine_public_autoconf_adjustConfigureAcToRemoveGnuTextCruftBeforeAutoconf
+		
+		libtoolize --install --force --verbose
+		
+		local submoduleThatDoesNotPlayNicelyWithAutoconf
+		for submoduleThatDoesNotPlayNicelyWithAutoconf in lib/ivykis lib/jsonc modules/afmongodb/mongo-c-driver modules/afamqp/rabbitmq-c
+		do
+			set +f
+				rm -rf "$submoduleThatDoesNotPlayNicelyWithAutoconf"/*
+			set -f
+		done
+		
+		autoreconf --install --force --verbose || true
+		automake --verbose
+		
+		# https://github.com/sam-github/libnet
+		
+		# https://www.balabit.com/sites/default/files/documents/syslog-ng-ose-3.8-guides/en/syslog-ng-ose-v3.8-guide-admin/html-single/index.html#geoip-parser
+		# Data at http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz ; changes often
+		# An official c binary for the databases is at https://github.com/maxmind/libmaxminddb/blob/master/bin/mmdblookup.c
+		# --enable-geoip
+		# Something to consider for an aggregating server
+		
+		# --with-python=2.7
+		
+		local forBuild='false'
+		local recreateConfigSite='false'
+		
+		# syslog-ng can't be fully static as it loads dynamic modules
+		libertine_configsite_create "$forBuild"
+		# local outputFilePath="$(libertine_public_inputSysrootPath)"/etc/config.site
+		# sed -i \
+		# 	-e 's; --static ; -fno-pic -fno-pie -fno-PIC ;g' \
+		# 	-e 's; -static ; ;g' \
+		# 	-e 's; -Wl,-Bstatic ; ;g' \
+		# 	"$outputFilePath"
+		# rm -rf config.cache
+		# cp "$outputFilePath" config.cache
+		
+		local forBuild='false'
+		local recreateConfigSite='false'
+		libertine_public_autoconf_modernAutoconfConfigureOptions "$forBuild" "$recreateConfigSite" \
+			--enable-ssl \
+			--without-libnet \
+			--with-pidfile-dir=/var/run \
+			--with-module-dir=/usr/lib/syslog-ng \
+			--with-module-path=/usr/lib/syslog-ng \
+			--with-timezone-dir=/usr/share/zoneinfo \
+			--with-ld-library-path=/usr/lib/syslog-ng:/usr/lib \
+			--disable-extra-warnings \
+			--disable-debug \
+			--disable-env-wrapper \
+			--disable-gprof \
+			--disable-memtrace \
+			--disable-dynamic-linking \
+			--enable-mixed-linking \
+			--enable-ipv6 \
+			--disable-tcpwrapper \
+			--disable-spoof-source \
+			--disable-sql \
+			--disable-pacct \
+			--enable-linux-caps \
+			--disable-gcov \
+			--disable-mongodb \
+			--enable-legacy-mongodb-options=no \
+			--with-jsonc=system \
+			--enable-json=yes \
+			--disable-amqp \
+			--disable-stomp \
+			--with-ivykis=system \
+			--disable-smtp \
+			--enable-http \
+			--with-libcurl="$(libertine_public_outputHostSysrootPath)"/usr \
+			--disable-redis \
+			--disable-systemd \
+			--disable-geoip \
+			--disable-riemann \
+			--without-compile-date \
+			--without-systemd-journal \
+			--disable-python \
+			--disable-manpages \
+			--disable-java \
+			--disable-java-modules \
+			--enable-native
+		
+		sed -i \
+		 	-e 's;^LIBS = ;LIBS = -ljson-c -lglib-2.0 -lgmodule-2.0 -livykis -lcurl -lssl -lcrypt -lpcre -levtlog;g' \
+			Makefile
+		# 	-e 's;lib_libsyslog_ng_la_LINK = \$(LIBTOOL);lib_libsyslog_ng_la_LINK = clibtool-static;g' \
+		# 	-e 's;lib_\([a-z]+\)_\([a-z]+\)_la_LINK = \$(LIBTOOL);modules_\1_\2_la_LINK = clibtool-static;g' \
+		
+		libertine_public_autoconf_removePoToRemoveGnuTextCruftBeforeMake
+		
+		# local libertine_public_libtool='clibtool'
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+	
+	libertine_public_installAndStripBinaryIn bin chacl
+	libertine_public_installAndStripBinaryIn bin getfacl
+	libertine_public_installAndStripBinaryIn bin setfacl
+}

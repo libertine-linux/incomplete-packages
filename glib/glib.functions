@@ -1,0 +1,175 @@
+# This file is part of libertine linux's package glib. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT. No part of libertine linux's package glib, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package glib. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/libertine/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends attr
+
+depends zlib
+
+depends libffi
+
+depends libpcre
+
+depends build_python_2_7
+build_needs python2.7
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_pkg_config
+
+depends PkgConfig
+build_needs pkg-config
+
+depends build_slibtool
+build_needs clibtool-static libtoolize realpath
+
+depends build_perl
+build_needs perl
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip
+
+depends build_paxctl
+build_needs paxctl
+
+depends build_file
+build_needs file
+
+depends build_busybox
+build_needs expr install sort ls sleep cmp uniq rmdir
+
+# autogen.sh
+build_needs sh dirname which rm touch
+
+build_needs cp sed find xargs
+libertine_compile_glib()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_populateInputSysroot attr zlib libffi libpcre
+		
+		libertine_public_autoconf_adjustConfigureAcToRemoveGnuTextCruftBeforeAutoconf
+		
+		libertine_public_autoconf_installPkgConfigM4Macro
+		libtoolize --install --force --verbose
+		pushd m4
+			local m4File
+			set +f
+			for m4File in *.m4
+			do
+				set -f
+				cp "$m4File" ../m4macros
+			done
+			set -f
+		popd
+		
+		sed -i \
+			-e 's;po docs tests;;g' \
+			Makefile.am
+		
+		sed -i \
+			-e 's;./libtool;clibtool-static;g' \
+			-e 's;^glib_gmodule_suffix=.*;glib_gmodule_suffix=so;g' \
+			configure.ac
+		
+		NOCONFIGURE=1 sh autogen.sh
+		
+		libertine_public_addOrReplaceBinaryInPathWithSwallow msgfmt
+		
+		libertine_public_autoconf_modernAutoconfConfigure \
+			--enable-debug=no \
+			--disable-installed-tests \
+			--disable-always-build-tests \
+			--enable-largefile \
+			--disable-gc-friendly \
+			--enable-mem-pools \
+			--enable-static \
+			--disable-shared \
+			--enable-included-printf \
+			--disable-selinux \
+			--disable-fam \
+			--enable-xattr \
+			--disable-libelf \
+			--disable-libmount \
+			--disable-man \
+			--disable-dtrace \
+			--disable-systemtap \
+			--disable-coverage \
+			--enable-Bsymbolic \
+			--enable-znodelete \
+			--enable-compile-warnings \
+			--with-libiconv=no \
+			--without-pic \
+			--with-threads=posix \
+			--with-pcre=system \
+			--with-python=python2.7 \
+			glib_cv_stack_grows=no \
+			glib_cv_uscore=no \
+			glib_cv_pcre_has_unicode=yes
+		
+		libertine_public_autoconf_removePoToRemoveGnuTextCruftBeforeMake
+		
+		find -type f -name 'Makefile' | xargs sed -i -e 's/^CONFIG_STATUS_DEPENDENCIES.*/CONFIG_STATUS_DEPENDENCIES =/g'
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+	
+	pushd "$(libertine_public_outputHostSysrootPath)"/usr/bin
+		
+		local binary
+		set +f
+		for binary in *
+		do
+			set -f
+			local type="$(file --brief --mime-type "$binary")"
+			case "$type" in
+				
+				application/x-sharedlib)
+					libertine_public_stripAndSecureBinary "$binary"
+				;;
+				
+				text/x-python)
+					sed -i -e 's;^#!.*$;#!/usr/bin/env python2.7;g' "$binary"
+				;;
+				
+				text/x-shellscript|text/plain)
+					sed -i -e 's;^#!.*$;#!/usr/bin/env sh;g' "$binary"
+				;;
+				
+				*)
+					core_exitError 1 'Do not know how to handle $file'
+				;;
+				
+			esac
+		done
+		set -f
+		
+	popd
+	
+	set +f
+	local pcFile
+	for pcFile in "$(libertine_public_outputHostSysrootPath)"/usr/lib/pkgconfig/*.pc
+	do
+		set -f
+		sed -i -e 's;/usr;'"$(libertine_public_outputHostSysrootPath)"'/usr;g' "$pcFile"
+	done
+	set -f
+}
